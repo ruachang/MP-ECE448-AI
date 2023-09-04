@@ -31,7 +31,7 @@ def compute_accuracies(predicted_labels, dev_labels):
     fn = sum([yhats[i] != dev_labels[i] and yhats[i] == 0 for i in range(len(yhats))])
     return accuracy, fp, fn, tp, tn
 
-# print value and also percentage out of n
+# print value and also percentage out of na
 def print_value(label, value, numvalues):
    print(f"{label} {value} ({value/numvalues}%)")
 

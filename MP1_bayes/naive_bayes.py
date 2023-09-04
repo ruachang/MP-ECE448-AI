@@ -39,8 +39,25 @@ def load_data(trainingdir, testdir, stemming=False, lowercase=False, silently=Fa
     print(f"Stemming: {stemming}")
     print(f"Lowercase: {lowercase}")
     train_set, train_labels, dev_set, dev_labels = reader.load_dataset(trainingdir,testdir,stemming,lowercase,silently)
+    train_set, dev_set = delete_freq_words(train_set, dev_set)
     return train_set, train_labels, dev_set, dev_labels
-
+"""
+Delete the words that will repeatly appears, which means that they
+will not contribute to catagorize
+"""
+def delete_freq_words(train_set, dev_set):
+    word_list = Counter()
+    for i in train_set:
+        word_list.update(i)
+    stop_list = word_list.most_common()[:30]
+    stop_list = list([x[0] for x in stop_list])
+    for i in stop_list:
+        for j in range(len(train_set)):
+            train_set[j] = list(filter(lambda x : x != i, train_set[j]))
+    for i in stop_list:
+        for j in range(len(dev_set)):
+            dev_set[j] = list(filter(lambda x : x != i, dev_set[j]))
+    return train_set, dev_set
 """
 Count all the words in the train set and return the conditonal prob of
 each word in each kind
@@ -64,6 +81,10 @@ def count_word(train_set, train_labels):
         prior_prob = pos_num / len(train_labels)
     return type_num, positive_list, negetive_list, prior_prob
 
+"""
+Calculate the probability of key in the given word_list using 
+Laplace smoothing methods
+"""
 def laplace_smooth(alpha, key, num, word_list):
     kind = len(word_list.keys())
     if key in word_list.keys():
@@ -71,21 +92,20 @@ def laplace_smooth(alpha, key, num, word_list):
     else:
         prob = alpha / (num + (kind + 1) * alpha)
     return math.log(prob)
-
+"""
+Calculate the prob of word in the given positive list and negetive list
+"""
 def prob_calculate(word, alpha, type_num, positive_list, negetive_list):
-    # positive_prob = Counter()
-    # for key in positive_list.keys():
-        # positive_prob[keys] = positive_list[keys] / type_num[1]
     pos_prob = laplace_smooth(alpha, word, type_num[1], positive_list)
     # negetive_prob = Counter()
     # for keys in negetive_list.keys():
     neg_prob = laplace_smooth(alpha, word, type_num[0], negetive_list)
 
     return pos_prob, neg_prob
-    # positive_prob.most_common()
-    # negetive_prob.most_common()
-    # return positive_prob, negetive_prob
     
+"""
+Make pridiction of the sentence
+"""
 def make_prediction(word, alpha, type_num, positive_list, negetive_list, prior_prob):
     pos_probs = math.log(prior_prob)
     neg_probs = math.log(1 - prior_prob)
@@ -106,7 +126,7 @@ Main function for training and predicting with naive bayes.
 def naiveBayes(dev_set, train_set, train_labels, laplace=1.0, pos_prior=0.5, silently=False):
     print_values(laplace,pos_prior)
 
-    type_num, positive_list, negetive_list, pos_prior = count_word(train_set, train_labels)
+    type_num, positive_list, negetive_list, _ = count_word(train_set, train_labels)
     
     # positive_prob, negetive_prob = prob_calculate(type_num, positive_list, negetive_list)
     yhats = []

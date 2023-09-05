@@ -20,7 +20,7 @@ After gaining the likeliness of prob of each $x_i$, we can try to predict in dev
 
 ## Some programming detail
 
-* Use some data structure like counter
-* Use `log` to calculate the times of the prob => turn it into add
+* Use some data structure. In Python, the class `Counter` can help us to count the number of added vector easily
+* Use `log` to calculate the times of the prob => turn it into add to prevent overflow
 * To avoid zero prob in prediction, we have to use ***Laplace smoothing*** to smoth the prob 
-  * Assume that each kinds at least have $\alpha$ items. Then the sum of the samples has changed to $\ n + \alpha * (k)n\ $So the likeliness becomes $$
+  * Assume that each kinds at least have $\alpha$ items. Then the sum of the samples has changed to $ N + \alpha * (k + 1) \; $So the likeliness becomes $\frac{Count(n) + \alpha}{N + alpha * (k + 1)} $

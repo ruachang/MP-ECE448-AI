@@ -103,7 +103,7 @@ Main function for training and predicting with naive bayes.
     You can modify the default values for the Laplace smoothing parameter and the prior for the positive label.
     Notice that we may pass in specific values for these parameters during our testing.
 """
-def naiveBayes(dev_set, train_set, train_labels, laplace=1.0, pos_prior=0.5, silently=False):
+def naiveBayes(dev_set, train_set, train_labels, laplace=0.07, pos_prior=0.5, silently=False):
     print_values(laplace,pos_prior)
 
     type_num, positive_list, negetive_list, _ = count_word(train_set, train_labels)

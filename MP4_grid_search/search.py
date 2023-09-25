@@ -35,10 +35,28 @@ def best_first_search(starting_state):
     #   - check whether you've finished the search by calling state.is_goal()
     #       - then call backtrack(visited_states, state)...
     #   - you can reuse the search code from mp3...
-    # Your code here ---------------
-
+    while len(frontier) > 0:
+        visit_node = heapq.heappop(frontier)
+        # * if the state is the min: found
+        if visit_node.is_goal() == True:
+            path = backtrack(visited_states, visit_node)
+            return path
+        # * if not, then add son of the state in the frontier(state and step)
+        # visited_states[visit_node.state] = (visit_node.state, visit_node.dist_from_start)
+        neighbors = visit_node.get_neighbors()
+        for i in neighbors:
+            if i not in visited_states:
+                heapq.heappush(frontier, i)
+                # print("New vist puzzle: {} step: {}, h: {}".format(i, i.dist_from_start, i.h))
+                visited_states[i] = (visit_node, i.dist_from_start)
+            else:
+            # ! if it is encountered second times, its value should be renewed, if the path is shorter
+                if i.dist_from_start < visited_states[i][1]:
+                    visited_states[i] = (visit_node, i.dist_from_start)
+            # else:
+            #     if i.dist_from_start > visited_states[i][1]:
+            #         visited_states[i] = (visit_node, i.dist_from_start)
     # ------------------------------
-    
     # if you do not find the goal return an empty list
     return []
 
@@ -48,7 +66,12 @@ def best_first_search(starting_state):
 # NOTE: the parent of the starting state is None
 def backtrack(visited_states, goal_state):
     path = []
+    path.append(goal_state)
     # Your code here ---------------
-
+    parent_node, distant = visited_states[goal_state]
+    while distant != 0:
+        path.append(parent_node)
+        parent_node, distant = visited_states[parent_node]
+    path = path[::-1]
     # ------------------------------
     return path

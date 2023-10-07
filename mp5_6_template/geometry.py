@@ -38,14 +38,14 @@ def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
             vector = [i[0] - i[2], i[1] - i[3]]
             dis = point_segment_distance(center, (start_point, end_point))
             max_dis = alien.get_width()
-            if dis >= max_dis:
+            if dis > max_dis:
                 continue
             else:
                 vec1 = [i[0] - center[0], i[1] - center[1]]
                 vec2 = [i[2] - center[0], i[3] - center[1]]
                 point1_center = np.linalg.norm(vec1)
                 point2_center = np.linalg.norm(vec2)
-                if point1_center < max_dis or point2_center < max_dis:
+                if point1_center <= max_dis or point2_center <= max_dis:
                     return True 
                 else:
                     cos1 = vec1[0] * vector[0] + vec1[1] * vector[1]
@@ -57,33 +57,61 @@ def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
     elif shape == "Horizontal":
         head, tail = alien.get_head_and_tail()
         width = alien.get_width()
-        edges = [((head[0], head[1] - width), (head[0], head[1] + width)), 
-                ((head[0], head[1] - width), (tail[0], tail[1] - width)),
-                ((tail[0], tail[1] - width), (tail[0], tail[1] + width)),
-                ((head[0], head[1] + width), (tail[0], tail[1] + width))]
-        for i in walls:
-            for edge in edges:
-                start_point = (i[0], i[1])
-                end_point = (i[2], i[3])
-                if do_segments_intersect((start_point, end_point), edge):
+        # head[0] += width 
+        # tail[0] -= width
+        edges = [((head[0] + width, head[1] - width), (head[0] + width, head[1] + width)), 
+                ((head[0] + width, head[1] - width), (tail[0] - width, tail[1] - width)),
+                ((tail[0] - width, tail[1] - width), (tail[0] - width, tail[1] + width)),
+                ((head[0] + width, head[1] + width), (tail[0] - width, tail[1] + width))]
+        polygon = [
+            (head[0], head[1] - width),
+            (head[0], head[1] + width),
+            (tail[0], tail[1] + width),
+            (tail[0], tail[1] - width)
+        ]
+        for wall in walls:
+            if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
+                    return True
+            else:
+                if point_segment_distance(head, ((wall[0], wall[1]), (wall[2], wall[3]))) <= width or point_segment_distance(tail, ((wall[0], wall[1]), (wall[2], wall[3]))) <= width:
                     return True
                 else:
-                    continue
+                    for edge in edges:
+                        start_point = (wall[0], wall[1])
+                        end_point = (wall[2], wall[3])
+                        if do_segments_intersect((start_point, end_point), edge):
+                            return True
+                        else:
+                            continue
     else:
         head, tail = alien.get_head_and_tail()
         width = alien.get_width()
-        edges = [((head[0] - width, head[1]), (head[0] + width, head[1])), 
-                ((head[0] - width, head[1]), (tail[0] - width, tail[1])),
-                ((tail[0] - width, tail[1]), (tail[0] + width, tail[1])),
-                ((head[0] + width, head[1]), (tail[0] + width, tail[1]))]
-        for i in walls:
-            for edge in edges:
-                start_point = (i[0], i[1])
-                end_point = (i[2], i[3])
-                if do_segments_intersect((start_point, end_point), edge):
+        # head[1] += width 
+        # tail[1] -= width
+        edges = [((head[0] - width, head[1] - width), (head[0] + width, head[1] - width)), 
+                ((head[0] - width, head[1] - width), (tail[0] - width, tail[1] + width)),
+                ((tail[0] - width, tail[1] + width), (tail[0] + width, tail[1] + width)),
+                ((head[0] + width, head[1] - width), (tail[0] + width, tail[1] + width))]
+        polygon = [
+            (head[0] + width, head[1]),
+            (tail[0] + width, tail[1]),
+            (tail[0] - width, tail[1]),
+            (tail[0] - width, head[1])
+        ]
+        for wall in walls:
+            if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
+                    return True
+            else:
+                if point_segment_distance(head, ((wall[0], wall[1]), (wall[2], wall[3]))) <= width or point_segment_distance(tail, ((wall[0], wall[1]), (wall[2], wall[3]))) <= width:
                     return True
                 else:
-                    continue
+                    for edge in edges:
+                        start_point = (wall[0], wall[1])
+                        end_point = (wall[2], wall[3])
+                        if do_segments_intersect((start_point, end_point), edge):
+                            return True
+                        else:
+                            continue
     return False
 
 def is_alien_within_window(alien: Alien, window: Tuple[int]):
@@ -95,18 +123,19 @@ def is_alien_within_window(alien: Alien, window: Tuple[int]):
     """
     center = alien.get_centroid()
     shape = alien.get_shape()
-    window_lr_seg = [(0, 0, window[0], 0), (0, window[1], window[0], window[1])]
-    window_ud_seg = [(0, 0, 0, window[1]), (window[0], 0, window[0], window[1])]
+    # head, tail = alien.get_head_and_tail()
+    window_ud_seg = [(0, 0, window[0], 0), (0, window[1], window[0], window[1])]
+    window_lr_seg = [(0, 0, 0, window[1]), (window[0], 0, window[0], window[1])]
     for i in window_lr_seg:
         start_point = (i[0], i[1])
         end_point = (i[2], i[3])
         dis = point_segment_distance(center, (start_point, end_point))
         if shape == "Horizontal":
-            max_dis = alien.get_length() / 2
+            max_dis = alien.get_length() / 2 + alien.get_width()
         else:
             max_dis = alien.get_width()
-        if dis > max_dis:
-            return True 
+        if dis <= max_dis:
+            return False 
         else:
             continue
     for i in window_ud_seg:
@@ -114,14 +143,14 @@ def is_alien_within_window(alien: Alien, window: Tuple[int]):
         end_point = (i[2], i[3])
         dis = point_segment_distance(center, (start_point, end_point))
         if shape == "Vertical":
-            max_dis = alien.get_length / 2 
+            max_dis = alien.get_length() / 2 + alien.get_width()
         else:
-            max_dis = aline.get_width()
-        if dis > max_dis:
-            return True
+            max_dis = alien.get_width()
+        if dis <= max_dis:
+            return False
         else:
             continue 
-    return False 
+    return True 
 
 def is_point_in_polygon(point, polygon):
     """Determine whether a point is in a parallelogram.
@@ -138,15 +167,16 @@ def is_point_in_polygon(point, polygon):
         point1, point2 = polygon[i], polygon[(i + 1) % 4]
         vector = (point2[0] - point1[0], point2[1] - point1[1])
         vector2 = (point[0] - point1[0], point[1] - point1[1])
+        dis = point_segment_distance(point, (point1, point2))
+        if dis == 0:
+            return True
         dot = vector[0] * vector2[0] + vector[1] * vector2[1]
-        if dot > 0:
-            symbol += 1
-        elif dot < 0:
-            symbol -= 1 
-    if symbol ==4 or symbol == -4:
-        return True 
-    else:
-        return False
+        if dot >= 0:
+            # symbol += 1
+            continue
+        else:
+            return False
+    return True
 
 def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: Tuple[int, int]):
     """Determine whether the alien's straight-line path from its current position to the waypoint touches a wall
@@ -160,11 +190,13 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
         Return:
             True if touched, False if not
     """
+    if does_alien_touch_wall(alien, walls):
+        return True
     cur_pos = alien.get_centroid()
     shape   = alien.get_shape()
     if cur_pos[0] == waypoint[0]:
         if cur_pos[1] == waypoint[1]:
-            alien.set_alien_pos(cur_pos)
+            alien.set_alien_pos(waypoint)
             if does_alien_touch_wall(alien, walls):
                 return True
             return False
@@ -176,7 +208,7 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
         direction = 0
     
     width = alien.get_width()
-    length = alien.get_length() / 2
+    length = alien.get_length() / 2 + alien.get_width()
     # move upwards and downwards
     if direction == 1:
         if shape == "Horizontal":
@@ -189,12 +221,20 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
                        (cur_pos[0] + width, cur_pos[1]),
                        (waypoint[0] + width, waypoint[1]),
                        (waypoint[0] - width, waypoint[1])]
-          
+        edges = [
+            (polygon[0], polygon[1]),
+            (polygon[1], polygon[2]),
+            (polygon[2], polygon[3]),
+            (polygon[3], polygon[0]),
+        ]
         for wall in walls:
                 if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
                     return True
                 else:
-                    continue 
+                    for edge in edges:
+                        if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
+                            return True
+                    continue
     # move leftwards and rightwards
     if direction == 2:
         if shape == "Vertical":
@@ -208,11 +248,20 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
                        (cur_pos[0], cur_pos[1] + width),
                        (waypoint[0], waypoint[1] + width),
                        (waypoint[0], waypoint[1] - width)]
+        edges = [
+            (polygon[0], polygon[1]),
+            (polygon[1], polygon[2]),
+            (polygon[2], polygon[3]),
+            (polygon[3], polygon[0]),
+        ]
         for wall in walls:
-            if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
-                return True
-            else:
-                continue 
+                if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
+                    return True
+                else:
+                    for edge in edges:
+                        if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
+                            return True
+                    continue
     if direction == 0:
         # print("?")
         s1 = ((cur_pos[0], cur_pos[1]), (waypoint[0], waypoint[1]))
@@ -223,8 +272,9 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
                 continue
             else:
                 return True
-    alien.set_alien_pos(cur_pos)
+    alien.set_alien_pos(waypoint)
     if does_alien_touch_wall(alien, walls):
+        alien.set_alien_pos(cur_pos)
         return True
     # print("?")
     # s1 = [cur_pos[0], cur_pos[1], waypoint[0], waypoint[1]]
@@ -233,6 +283,7 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
     #         continue
     #     else:
     #         return True
+    alien.set_alien_pos(cur_pos)
     return False
     
 def point_segment_distance(p, s):

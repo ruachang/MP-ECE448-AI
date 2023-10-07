@@ -13,8 +13,8 @@
             "justMyCode": true,
             "args":[
                 "--config", "maps/test_config.txt",
-                "--map", "Test2",
-                
+                "--map", "Test5",
+                "--human"
             ]
         }
     ]

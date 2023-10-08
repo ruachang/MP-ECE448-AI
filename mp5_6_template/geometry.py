@@ -32,6 +32,8 @@ def cos(vec1, vec2):
         return  dot / (vec1_dis * vec2_dis)
     else:
         return dot
+def sin(cos_value):
+    return np.sqrt(1 - cos_value * cos_value)
 
 def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
     """Determine whether the alien touches a wall
@@ -223,79 +225,68 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
     width = alien.get_width()
     length = alien.get_length() / 2 + alien.get_width()
     # move upwards and downwards
-    if direction == 1:
-        if shape == "Horizontal":
-            polygon = [(cur_pos[0] - length, cur_pos[1]),
-                       (cur_pos[0] + length, cur_pos[1]),
-                       (waypoint[0] + length, waypoint[1]),
-                       (waypoint[0] - length, waypoint[1])]
-        else:
-            polygon = [(cur_pos[0] - width, cur_pos[1]),
-                       (cur_pos[0] + width, cur_pos[1]),
-                       (waypoint[0] + width, waypoint[1]),
-                       (waypoint[0] - width, waypoint[1])]
-        edges = [
-            (polygon[0], polygon[1]),
-            (polygon[1], polygon[2]),
-            (polygon[2], polygon[3]),
-            (polygon[3], polygon[0]),
-        ]
-        for wall in walls:
-                if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
-                    return True
-                else:
-                    for edge in edges:
-                        if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
-                            return True
-                    continue
-    # move leftwards and rightwards
-    if direction == 2:
-        if shape == "Vertical":
-            polygon = [(cur_pos[0], cur_pos[1] - length),
-                       (cur_pos[0], cur_pos[1] + length),
-                       (waypoint[0], waypoint[1] + length),
-                       (waypoint[0], waypoint[1] - length)]
-            
-        else:
-            polygon = [(cur_pos[0], cur_pos[1] - width),
-                       (cur_pos[0], cur_pos[1] + width),
-                       (waypoint[0], waypoint[1] + width),
-                       (waypoint[0], waypoint[1] - width)]
-        edges = [
-            (polygon[0], polygon[1]),
-            (polygon[1], polygon[2]),
-            (polygon[2], polygon[3]),
-            (polygon[3], polygon[0]),
-        ]
-        for wall in walls:
-                if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
-                    return True
-                else:
-                    for edge in edges:
-                        if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
-                            return True
-                    continue
-    if direction == 0:
+    if direction == 1 and shape == "Vertical":
+        # if shape == "Horizontal":
+        #     polygon = [(cur_pos[0] - length, cur_pos[1]),
+        #                (cur_pos[0] + length, cur_pos[1]),
+        #                (waypoint[0] + length, waypoint[1]),
+        #                (waypoint[0] - length, waypoint[1])]
+        # else:
+        polygon = [(cur_pos[0] - width, cur_pos[1]),
+                   (cur_pos[0] + width, cur_pos[1]),
+                   (waypoint[0] + width, waypoint[1]),
+                   (waypoint[0] - width, waypoint[1])]
+        # ]
+    if direction == 2 and shape == "Horizontal":
+        polygon = [(cur_pos[0], cur_pos[1] - width),
+                   (cur_pos[0], cur_pos[1] + width),
+                   (waypoint[0], waypoint[1] + width),
+                   (waypoint[0], waypoint[1] - width)]
+    else:
         print("?")
-        s1 = ((cur_pos[0], cur_pos[1]), (waypoint[0], waypoint[1]))
-        for i in walls:
-            start_point = (i[0], i[1])
-            end_point = (i[2], i[3])
-            if do_segments_intersect((start_point, end_point), s1) is False:
-                continue
-            else:
-                return True
+        if shape == "Vertical": 
+            polygon = [
+                (cur_pos[0],  cur_pos[1] - length),
+                (waypoint[0], waypoint[1] - length),
+                (waypoint[0], waypoint[1] + length),
+                (cur_pos[0],  cur_pos[1] + length)
+            ]
+        elif shape == "Horizontal":
+            polygon = [
+                (cur_pos[0] + length,  cur_pos[1]),
+                (waypoint[0] + length, waypoint[1]),
+                (waypoint[0] - length, waypoint[1]),
+                (cur_pos[0] - length,  cur_pos[1])
+            ]
+        else:
+            vector = [waypoint[0] - cur_pos[0], waypoint[1] - cur_pos[1]]
+            sin_value = cos(vector, [1, 0])
+            cos_value = sin(sin_value)
+            reflect = width * cos_value
+            dis = width * sin_value
+            polygon = [
+                (cur_pos[0] - reflect, cur_pos[1] - dis),
+                (waypoint[0] - reflect, waypoint[1] - dis),
+                (waypoint[0] + reflect, waypoint[1] + dis),
+                (cur_pos[0] + reflect, cur_pos[1] + dis)
+            ]
+    edges = [
+        (polygon[0], polygon[1]),
+        (polygon[1], polygon[2]),
+        (polygon[2], polygon[3]),
+        (polygon[3], polygon[0])
+    ]
+    for wall in walls:
+        if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
+            return True
+        else:
+            for edge in edges:
+                if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
+                    return True
     alien.set_alien_pos(waypoint)
     if does_alien_touch_wall(alien, walls):
         alien.set_alien_pos(cur_pos)
         return True
-    # print("?")
-    # s1 = [cur_pos[0], cur_pos[1], waypoint[0], waypoint[1]]
-    # for i in walls:
-    #     if do_segments_intersect(i, s1) is False:
-    #         continue
-    #     else:
-    #         return True
     alien.set_alien_pos(cur_pos)
     return False
     

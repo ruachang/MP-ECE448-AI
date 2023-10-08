@@ -18,6 +18,21 @@ from typing import List, Tuple
 from copy import deepcopy
 
 
+def dot_product(v1, v2):
+    return v1[0] * v2[0] + v1[1] * v2[1]
+
+def cross_product(p1, p2):
+    return p1[0] * p2[1] - p1[1] * p2[0]
+
+def cos(vec1, vec2):
+    vec1_dis = np.linalg.norm(vec1)
+    vec2_dis = np.linalg.norm(vec2)
+    dot = dot_product(vec1, vec2)
+    if vec1_dis != 0 and vec2 != 0:
+        return  dot / (vec1_dis * vec2_dis)
+    else:
+        return dot
+
 def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
     """Determine whether the alien touches a wall
 
@@ -48,8 +63,8 @@ def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
                 if point1_center <= max_dis or point2_center <= max_dis:
                     return True 
                 else:
-                    cos1 = vec1[0] * vector[0] + vec1[1] * vector[1]
-                    cos2 = vec2[0] * -vector[0] + vec2[1] * -vector[1]
+                    cos1 = cos(vec1, vector)
+                    cos2 = - cos(vec2, vector)
                     if cos1 > 0 and cos2 > 0:
                         return True 
                     else:
@@ -57,8 +72,6 @@ def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
     elif shape == "Horizontal":
         head, tail = alien.get_head_and_tail()
         width = alien.get_width()
-        # head[0] += width 
-        # tail[0] -= width
         edges = [((head[0] + width, head[1] - width), (head[0] + width, head[1] + width)), 
                 ((head[0] + width, head[1] - width), (tail[0] - width, tail[1] - width)),
                 ((tail[0] - width, tail[1] - width), (tail[0] - width, tail[1] + width)),
@@ -263,7 +276,7 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
                             return True
                     continue
     if direction == 0:
-        # print("?")
+        print("?")
         s1 = ((cur_pos[0], cur_pos[1]), (waypoint[0], waypoint[1]))
         for i in walls:
             start_point = (i[0], i[1])
@@ -315,12 +328,6 @@ def point_segment_distance(p, s):
         dis = abs(vector[0] * vector2[1] - vector[1] * vector2[0])
         length_vec2 = np.linalg.norm(vector)
         return dis / length_vec2
-
-def dot_product(v1, v2):
-    return v1[0] * v2[0] + v1[1] * v2[1]
-
-def cross_product(p1, p2):
-    return p1[0] * p2[1] - p1[1] * p2[0]
 
 def clock_rot(p1, p2):
     clk = cross_product(p1, p2)

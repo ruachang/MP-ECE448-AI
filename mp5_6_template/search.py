@@ -20,7 +20,7 @@ This file contains search functions.
 
 from collections import deque
 import heapq
-
+from state import MazeState
 
 # Search should return the path and the number of states explored.
 # The path should be a list of MazeState objects that correspond
@@ -32,18 +32,57 @@ import heapq
 
 
 def search(maze, searchMethod):
-    return {
-        "astar": astar,
-    }.get(searchMethod, [])(maze)
+    # return {
+    #     "astar": astar,
+    # }.get(searchMethod, [])(maze)
+    states_explored, path = astar(maze)
+    maze.states_explored = states_explored
+    return path 
 
 
 # TODO: VI
 def astar(maze):
-    return None
+    start_point = maze.get_start()
+    visited_states = {start_point: (None, 0)}
+    frontier = []
+    heapq.heappush(frontier, start_point)
+    state_tmp = 0
+    while len(frontier) > 0:
+        visited_pos = heapq.heappop(frontier)
+        state_tmp += 1
+        if visited_pos.is_goal() == True:
+            path = backtrack(visited_states, visited_pos)
+            visited_pos.maze.states_explored = state_tmp - 1
+            # maze = visited_pos.maze
+            return visited_pos.maze.states_explored, path
+        
+        visited_pos.maze.states_explored = state_tmp
+        visited_pos.dist_from_start = visited_states[visited_pos][1]
+        print(visited_pos, visited_pos.maze.states_explored)
+        neighbors = visited_pos.get_neighbors()
+        # state_tmp = visited_pos.maze.states_explored
+        
+        for i in neighbors: 
+            if i not in visited_states:
+                heapq.heappush(frontier, i)
+                visited_states[i] = (visited_pos, i.dist_from_start)
+            else:
+                if i.dist_from_start < visited_states[i][1]:
+                    visited_states[i] = (visited_pos, i.dist_from_start)
+    return visited_pos.maze.states_explored, None
 
 
 # Go backwards through the pointers in visited_states until you reach the starting state
 # NOTE: the parent of the starting state is None
 # TODO: VI
 def backtrack(visited_states, current_state):
-    return None
+    path = []
+    path.append(current_state)
+    # Your code here ---------------
+    parent_node, distant = visited_states[current_state]
+    while distant != 0:
+        path.append(parent_node)
+        parent_node, distant = visited_states[parent_node]
+    path = path[::-1]
+    # ------------------------------
+    return path

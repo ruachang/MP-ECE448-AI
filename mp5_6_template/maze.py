@@ -116,6 +116,13 @@ class Maze:
                 A dict with shape index as keys and the list of waypoints coordinates as values
         """
         valid_waypoints = {i: [] for i in range(len(self.alien.get_shapes()))}
+        for shape in range(len(self.alien.get_shapes())):
+            for waypoint in self.__waypoints:
+                # TEST
+                new_alien = self.create_new_alien(waypoint[0], waypoint[1], shape)
+                crush = does_alien_touch_wall(new_alien, self.walls)
+                if not crush:
+                    valid_waypoints[shape].append(waypoint)
         return valid_waypoints
 
     # TODO VI
@@ -127,7 +134,22 @@ class Maze:
             Return:
                 the k valid waypoints that are closest to waypoint
         """
-        nearest_neighbors = []
+        neighbors_dis_dic = {}
+        for waypoint in self.get_valid_waypoints()[cur_shape]:
+            if waypoint == cur_waypoint:
+                continue
+            else:
+                start = (cur_waypoint[0], cur_waypoint[1], cur_shape)
+                end = (waypoint[0], waypoint[1], cur_shape)
+                if cur_waypoint[0] == 175 and cur_waypoint[1] == 100:
+                    print("chexk")
+                if waypoint[0] == 209 or waypoint[0] == 208:
+                    print("stop")
+                if self.is_valid_move(start, end):
+                    dis = euclidean_distance(cur_waypoint, waypoint)
+                    neighbors_dis_dic[waypoint] = dis
+        neighbors_dis_dic = sorted(neighbors_dis_dic, key=neighbors_dis_dic.get, reverse=False)
+        nearest_neighbors = neighbors_dis_dic[:self.k]
         return nearest_neighbors
 
     def create_new_alien(self, x, y, shape_idx):
@@ -144,7 +166,23 @@ class Maze:
             Return:
                 True if the move is valid, False otherwise
         """
-        return False
+        # create an alien with different shape
+        if (start, end) in self.move_cache:
+            return self.move_cache[(start, end)]
+        else:
+            legal =  True
+            # if it change from vertical => horizontal / horizontal => vertical, they should go through ball
+            if (start[2] == 0 and end[2] == 2) or (start[2] == 2 and end[2] == 0):
+                shape_new_alien = self.create_new_alien(start[0], start[1], 1)
+                if does_alien_touch_wall(shape_new_alien, self.walls):
+                    legal = False  
+            shape_new_alien = self.create_new_alien(start[0], start[1], end[2])
+            if does_alien_touch_wall(shape_new_alien, self.walls):
+                legal = False 
+            if does_alien_path_touch_wall(self.alien, self.walls, (end[0], end[1])):
+                legal = False
+            self.move_cache[(start, end)] = legal
+            return legal
 
     def get_neighbors(self, x, y, shape_idx):
         """Returns list of neighboring squares that can be moved to from the given coordinate
@@ -159,7 +197,7 @@ class Maze:
 
         nearest = self.get_nearest_waypoints((x, y), shape_idx)
         neighbors = [(*end, shape_idx) for end in nearest]
-        for end in [(x, y, shape_idx - 1), (x, y, shape_idx + 1)]:
+        for end in [(x, y, (shape_idx - 1) % len(self.alien.get_shapes())), (x, y, (shape_idx + 1) % len(self.alien.get_shapes()))]:
             start = (x, y, shape_idx)
             if self.is_valid_move(start, end):
                 neighbors.append(end)

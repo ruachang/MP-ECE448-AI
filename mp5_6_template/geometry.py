@@ -32,8 +32,14 @@ def cos(vec1, vec2):
         return  dot / (vec1_dis * vec2_dis)
     else:
         return dot
-def sin(cos_value):
-    return np.sqrt(1 - cos_value * cos_value)
+def sin(vec1, vec2):
+    vec1_dis = np.linalg.norm(vec1)
+    vec2_dis = np.linalg.norm(vec2)
+    dot = cross_product(vec1, vec2)
+    if vec1_dis != 0 and vec2 != 0:
+        return  dot / (vec1_dis * vec2_dis)
+    else:
+        return dot
 
 def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
     """Determine whether the alien touches a wall
@@ -74,10 +80,10 @@ def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
     elif shape == "Horizontal":
         head, tail = alien.get_head_and_tail()
         width = alien.get_width()
-        edges = [((head[0] + width, head[1] - width), (head[0] + width, head[1] + width)), 
-                ((head[0] + width, head[1] - width), (tail[0] - width, tail[1] - width)),
-                ((tail[0] - width, tail[1] - width), (tail[0] - width, tail[1] + width)),
-                ((head[0] + width, head[1] + width), (tail[0] - width, tail[1] + width))]
+        edges = [((head[0], head[1] - width), (head[0], head[1] + width)), 
+                ((head[0], head[1] - width), (tail[0], tail[1] - width)),
+                ((tail[0], tail[1] - width), (tail[0], tail[1] + width)),
+                ((head[0], head[1] + width), (tail[0], tail[1] + width))]
         polygon = [
             (head[0], head[1] - width),
             (head[0], head[1] + width),
@@ -103,10 +109,10 @@ def does_alien_touch_wall(alien: Alien, walls: List[Tuple[int]]):
         width = alien.get_width()
         # head[1] += width 
         # tail[1] -= width
-        edges = [((head[0] - width, head[1] - width), (head[0] + width, head[1] - width)), 
-                ((head[0] - width, head[1] - width), (tail[0] - width, tail[1] + width)),
-                ((tail[0] - width, tail[1] + width), (tail[0] + width, tail[1] + width)),
-                ((head[0] + width, head[1] - width), (tail[0] + width, tail[1] + width))]
+        edges = [((head[0] - width, head[1]), (head[0] + width, head[1])), 
+                ((head[0] - width, head[1]), (tail[0] - width, tail[1])),
+                ((tail[0] - width, tail[1]), (tail[0] + width, tail[1])),
+                ((head[0] + width, head[1]), (tail[0] + width, tail[1]))]
         polygon = [
             (head[0] + width, head[1]),
             (tail[0] + width, tail[1]),
@@ -209,6 +215,12 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
         return True
     cur_pos = alien.get_centroid()
     shape   = alien.get_shape()
+    cur_head, cur_tail = alien.get_head_and_tail()
+    alien.set_alien_pos(waypoint)
+    tar_head, tar_tail = alien.get_head_and_tail()
+    move_vec1 = (tar_head, cur_head)
+    move_vec2 = (tar_tail, cur_tail)
+    
     if cur_pos[0] == waypoint[0]:
         if cur_pos[1] == waypoint[1]:
             alien.set_alien_pos(waypoint)
@@ -237,13 +249,13 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
                    (waypoint[0] + width, waypoint[1]),
                    (waypoint[0] - width, waypoint[1])]
         # ]
-    if direction == 2 and shape == "Horizontal":
+    elif direction == 2 and shape == "Horizontal":
         polygon = [(cur_pos[0], cur_pos[1] - width),
                    (cur_pos[0], cur_pos[1] + width),
                    (waypoint[0], waypoint[1] + width),
                    (waypoint[0], waypoint[1] - width)]
     else:
-        print("?")
+        # print("?")
         if shape == "Vertical": 
             polygon = [
                 (cur_pos[0],  cur_pos[1] - length),
@@ -261,7 +273,7 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
         else:
             vector = [waypoint[0] - cur_pos[0], waypoint[1] - cur_pos[1]]
             sin_value = cos(vector, [1, 0])
-            cos_value = sin(sin_value)
+            cos_value = sin(vector, [1, 0])
             reflect = width * cos_value
             dis = width * sin_value
             polygon = [
@@ -276,14 +288,25 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
         (polygon[2], polygon[3]),
         (polygon[3], polygon[0])
     ]
+    alien.set_alien_pos(cur_pos)
+    
     for wall in walls:
+        # TEST
+        if (wall[0] == 200 and wall[1] == 100):
+            print("why")
+        wall_vector = ((wall[0], wall[1]), (wall[2], wall[3]))
         if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
             return True
         else:
             for edge in edges:
                 if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
                     return True
-    alien.set_alien_pos(waypoint)
+                
+        # dis1 = segment_distance(wall_vector, move_vec1)
+        # dis2 = segment_distance(wall_vector, move_vec2)
+        # if min(dis1, dis2) <= width:
+        #     return True
+    # alien.set_alien_pos(waypoint)
     if does_alien_touch_wall(alien, walls):
         alien.set_alien_pos(cur_pos)
         return True

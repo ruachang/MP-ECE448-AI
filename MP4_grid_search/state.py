@@ -143,7 +143,11 @@ class GridState(AbstractState):
         # You need to instantiate them as GridState objects
         neighboring_locs = self.maze_neighbors(*self.state)
         for i in neighboring_locs:
-            new_state = GridState(state= i, goal = self.goal, dist_from_start= self.dist_from_start + 1, 
+            if i in self.goal:
+                new_goal = tuple(item for item in self.goal if item != i)
+            else:
+                new_goal = self.goal
+            new_state = GridState(state= i, goal = new_goal, dist_from_start= self.dist_from_start + 1, 
                                             use_heuristic= self.use_heuristic, 
                                             maze_neighbors= self.maze_neighbors,
                                             mst_cache= self.mst_cache)
@@ -152,18 +156,14 @@ class GridState(AbstractState):
 
     # TODO(VI): implement this method
     def is_goal(self):
-        if len(self.goal) == 1 and self.state == self.goal[0]:
-            return True 
-        else:
-            if  self.state in self.goal:
-                self.goal.remove(self.state)
-            return False
+        if len(self.goal) == 0:
+            return True
     
     # TODO(VI): implement these methods __hash__ AND __eq__
     def __hash__(self):
-        return 0
+        return hash(self.state) + hash(self.goal)
     def __eq__(self, other):
-        return True
+        return self.state == other.state and self.goal == other.goal
     
     # TODO(VI): implement this method
     # Our heuristic is: manhattan(self.state, nearest_goal) + MST(self.goal)
@@ -172,7 +172,10 @@ class GridState(AbstractState):
     #       and so the heuristic reduces to manhattan(self.state, self.goal[0])
     # You should use compute_mst_cost(self.goal, manhattan) which we imported from utils.py
     def check_nearest_goal(self):
-        manhaton_dis = 10000
+        if len(self.goal) == 0:
+            return 0
+        else:
+            manhaton_dis = 10000
         for i in self.goal:
             manhaton_dis = min(manhaton_dis, manhaton(self.state, i))
         return manhaton_dis

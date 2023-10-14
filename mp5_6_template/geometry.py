@@ -220,6 +220,7 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
     tar_head, tar_tail = alien.get_head_and_tail()
     move_vec1 = (tar_head, cur_head)
     move_vec2 = (tar_tail, cur_tail)
+    alien.set_alien_pos(cur_pos)
     
     if cur_pos[0] == waypoint[0]:
         if cur_pos[1] == waypoint[1]:
@@ -288,7 +289,6 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
         (polygon[2], polygon[3]),
         (polygon[3], polygon[0])
     ]
-    alien.set_alien_pos(cur_pos)
     
     for wall in walls:
         # TEST

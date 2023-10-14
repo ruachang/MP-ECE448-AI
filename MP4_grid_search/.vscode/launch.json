@@ -14,7 +14,7 @@
             "args": [
                 "--show_maze_vis",
                 "--problem_type", "GridMulti",
-                "--maze_file", "data/mazes/grid_single/tiny"
+                "--maze_file", "data/mazes/grid_multi/tiny"
             ]
         }
     ]

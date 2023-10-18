@@ -30,22 +30,38 @@ def smooth_transmission(trans_prob, unique_tag_list):
                 trans_prob[tag][processor_tag] = log(epsilon_for_pt * lack_processor) - log(sum_word_cnt)
             else:
                 trans_prob[tag][processor_tag] = log(tag_dic[processor_tag]) - log(sum_word_cnt)
-        
-def smooth_emit(emit_prob):
-    scale = 0.1
+def get_hapax_set(word_cnt):
+    hapax_set = []
+    for word in word_cnt.keys():
+        if word_cnt[word]:
+            hapax_set.append(word)
+    return hapax_set
 
-
+def smooth_emit(emit_prob, word_cnt):
+#     scale = 1000
+    hapax_set = get_hapax_set(word_cnt)
+    unknow_set = {}
     for tag in emit_prob.keys():
-        hapax_set = []
+        num_minor = 1
+        num_major = 0
         word_dic = emit_prob[tag]
         for word in word_dic.keys():
-            if word_dic[word] == 1:
-                hapax_set.append(word)
-        num_minor = len(hapax_set) + 1
-        num_major = len(emit_prob[tag].keys()) - num_minor + 1
-        sum_word_cnt = sum(word_dic.values()) + \
-                emit_epsilon * num_major + \
-                emit_epsilon * scale * num_minor
+            if word in hapax_set:
+                num_minor += 1
+            else:
+                num_major += 1
+        scale = num_minor / len(hapax_set)
+        sum_word_cnt = sum(word_dic.values()) + emit_epsilon * (len(word_dic.keys()) + 1)
+        unknown_ratio = num_minor / len(word_dic.keys())
+        # sum_word_cnt = sum(word_dic.values()) + \
+        #         emit_epsilon * num_major + \
+        #         emit_epsilon * scale * num_minor
+        # for word in word_dic.keys():
+        #     if word in hapax_set:
+        #         emit_prob[tag][word] = log((word_dic[word] + scale * emit_epsilon)) - log(sum_word_cnt)
+        #     else:
+        #         emit_prob[tag][word] = log((word_dic[word] + emit_epsilon)) - log(sum_word_cnt)
+        
         for word in word_dic.keys():
             if word in hapax_set:
                 emit_prob[tag][word] = log((word_dic[word] + scale * emit_epsilon)) - log(sum_word_cnt)
@@ -65,6 +81,7 @@ def training(sentences):
     trans_prob = defaultdict(lambda: defaultdict(lambda: 0)) # {tag0:{tag1: # }}
     
     tag_list = []
+    word_cnt = {}
     # TODO: (I)
     # Input the training set, output the formatted probabilities according to data statistics.
     for sentence in sentences:
@@ -72,6 +89,11 @@ def training(sentences):
             word, tag = sentence[i]
             # record all the tag in the set
             tag_list.append(tag)
+            # * record all word in the set
+            if word in word_cnt.keys():
+                word_cnt[word] = False 
+            else:
+                word_cnt[word] = True
             if tag not in emit_prob.keys():
                 emit_prob[tag] = {}
             if word not in emit_prob[tag].keys():
@@ -91,7 +113,7 @@ def training(sentences):
     unique_tag_list = list(set(tag_list))
     # probability of init 
     prob_word_tag(init_prob)
-    smooth_emit(emit_prob)
+    smooth_emit(emit_prob, word_cnt)
     smooth_transmission(trans_prob, unique_tag_list)
     return init_prob, emit_prob, trans_prob
 

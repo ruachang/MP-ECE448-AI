@@ -9,6 +9,7 @@ from math import log
 from copy import deepcopy
 prefix = 3
 suffix = 2
+HAPAX_THRESH = 1
 
 def data_observe(train):
     word_cnt = {}
@@ -65,11 +66,13 @@ def data_observe(train):
 
 # Note: remember to use these two elements when you find a probability is 0 in the training data.
 epsilon_for_pt = 1e-5
-emit_epsilon = 1e-5   # exact setting seems to have little or no effect
+emit_epsilon = 1e-5  # exact setting seems to have little or no effect
 
 # * chosen prefix and suffix list
-suffix_list = ["ly", "es", "ous", "ed", "ness", "'s", "us", "ing", "ment", "able", "er", "ic", "est", "less", "ist", "ent"]
-# suffix_list = ["ly", "es", "ous", "ed", "'s", "us", "ing", "able", "er", "ic", "est", "less", "ent"]
+# suffix_list = ["ly", "es", "ous", "ed", "ness", "'s", "us", "ing", "ment", "able", "er", "ic", "est", "less", "ist", "ent"]
+# suffix_list = set(["ly", "es", "ous", "ed", "'s", "us", "ing", "able", "er", "ic", "est", "less", "ent"])
+suffix_list = set(["ment", "ly", "ous", "able", "less", "ness", "est", "ist", "'s", "ing", "ed"])
+# suffix_list = set([])
 
 def prob_word_tag(word):
     sum_word_cnt = sum(word.values())
@@ -88,84 +91,72 @@ def smooth_transmission(trans_prob, unique_tag_list):
                 trans_prob[tag][processor_tag] = log(epsilon_for_pt * lack_processor) - log(sum_word_cnt)
             else:
                 trans_prob[tag][processor_tag] = log(tag_dic[processor_tag]) - log(sum_word_cnt)
+
+def have_profix(word):
+    suffix_word_4, suffix_word_3, suffix_word_2 = word[-4:], word[-3:], word[-2:]
+    if suffix_word_4 in suffix_list:
+            suffix = suffix_word_4
+    elif suffix_word_3 in suffix_list:
+            suffix = suffix_word_3
+    elif suffix_word_2 in suffix_list:
+            suffix = suffix_word_2
+    else:
+            suffix = "UNKNOWN"
+    new_type = "X_" + suffix
+    return new_type
+
 def get_hapax_set(word_cnt):
     hapax_set = []
     for word in word_cnt.keys():
-        if word_cnt[word][0]:
+        if word_cnt[word][0] == 1:
             hapax_set.append(word)
+    hapax_set = set(hapax_set)
     suffix_hapax_set = {}
-    changed_num = 0
     for word in hapax_set:
-            suffix_word_4, suffix_word_3, suffix_word_2 = word[-4:], word[-3:], word[-2:]
-            if suffix_word_4 not in suffix_list and suffix_word_3 not in suffix_list and suffix_word_2 not in suffix_list:
-                suffix_hapax_set[word] = 1
-                continue
-            elif suffix_word_4 in suffix_list:
-                suffix = suffix_word_4
-            elif suffix_word_3 in suffix_list:
-                suffix = suffix_word_3
-            elif suffix_word_2 in suffix_list:
-                suffix = suffix_word_2
-            changed_num += 1
-            new_type = "X_" + suffix
-            if new_type not in suffix_hapax_set.keys():
-                suffix_hapax_set[new_type] = []
-            suffix_hapax_set[new_type].append(word)
+        # TEST
+        new_type = have_profix(word)
+        if new_type not in suffix_hapax_set.keys():
+            suffix_hapax_set[new_type] = []
+        suffix_hapax_set[new_type].append(word)
     # unchanged_num = len(suffix_hapax_set.keys()) - len(suffix_list)
-    return hapax_set, suffix_hapax_set, len(hapax_set) - changed_num
+    return hapax_set, suffix_hapax_set
+
 
 def smooth_emit(emit_prob, word_cnt):
-    increment = 5
+    increment = HAPAX_THRESH
 
-    hapax_set, suffix_hapax_set, unknown_num = get_hapax_set(word_cnt)
-    unknow_set = {}
+    hapax_set, suffix_hapax_set = get_hapax_set(word_cnt)
+    suffix_tag_set = {}
+    for tag in emit_prob.keys():
+        suffix_tag_set[tag] = {"X_UNKNOWN": 1}
+    for word in word_cnt.keys():
+        if word in hapax_set:
+            tag = word_cnt[word][1]
+            new_type = have_profix(word)
+            if new_type not in suffix_tag_set[tag].keys():
+                suffix_tag_set[tag][new_type] = 0 
+    # TEST
+            suffix_tag_set[tag][new_type] += increment
+    hapax_scale_set = {}
     for tag in emit_prob.keys():  
-        sum_num = 0
-        minor_num = 1
-        word_dic = deepcopy(emit_prob[tag])
-        for suffix in suffix_list:
-                new_type = "X_" + suffix
-                emit_prob[tag][new_type] = increment
-        for word in word_dic.keys():
-            suffix_word_4, suffix_word_3, suffix_word_2 = word[-4:], word[-3:], word[-2:]
-            if word in hapax_set and \
-                    (suffix_word_4 in suffix_list or suffix_word_3 in suffix_list or suffix_word_2 in suffix_list):
-                if suffix_word_4 in suffix_list:
-                    suffix = suffix_word_4
-                elif suffix_word_3 in suffix_list:
-                    suffix = suffix_word_3
-                elif suffix_word_2 in suffix_list:
-                    suffix = suffix_word_2
-                new_type = "X_" + suffix
-                if new_type not in emit_prob[tag].keys():
-                    emit_prob[tag][new_type] = 0
-                emit_prob[tag][new_type] += increment
-                del emit_prob[tag][word]
-                sum_num += increment
-            elif word in hapax_set:
-                    sum_num += 1
-                    minor_num += 1
-            else:
-                sum_num += word_dic[word]
-                
-        sum_word_cnt = sum_num + emit_epsilon * (len(emit_prob[tag].keys()) + 1 )
-        # sum_word_cnt = sum(word_dic.values()) + \
-        #         emit_epsilon * num_major + \
-        #         emit_epsilon * scale * num_minor
+        sum_num = sum(emit_prob[tag].values())
         for word in emit_prob[tag].keys():
-            suffix_word_4, suffix_word_3, suffix_word_2 = word[-4:], word[-3:], word[-2:]
-            if "X_" in word:
-                new_type = word
-                scale = emit_prob[tag][new_type] / len(suffix_hapax_set[new_type])
-                emit_prob[tag][new_type] = log((emit_prob[tag][new_type] + scale * emit_epsilon)) - log(sum_word_cnt)
-            elif word in hapax_set:
-                scale = minor_num / unknown_num
-                emit_prob[tag][word] = log((emit_prob[tag][word] + scale * emit_epsilon)) - log(sum_word_cnt)
+            if word in hapax_set:
+                new_type = have_profix(word)
+                # scale = 1
+                # scale = suffix_tag_set[tag][new_type] / len(suffix_hapax_set[new_type])
+                sum_word_cnt = sum_num + emit_epsilon * (len(emit_prob[tag].keys()) + 1 )
+                
+                # scale = emit_prob[tag][new_type] / (len(hapax_set) - unknown_num)
+                emit_prob[tag][word] = log((1 + emit_epsilon)) - log(sum_word_cnt) #+ log()
             else:
+                sum_word_cnt = sum_num + emit_epsilon * (len(emit_prob[tag].keys()) + 1 )
                 emit_prob[tag][word] = log((emit_prob[tag][word] + emit_epsilon)) - log(sum_word_cnt)
-        scale = minor_num / unknown_num
-        emit_prob[tag]["UNKNOWN"] = log(scale * emit_epsilon) - log(sum_word_cnt)
-        # unknow_set[tag] = (, unknown_ratio, emit_prob[tag]["UNKNOWN"])
+        scale = suffix_tag_set[tag]["X_UNKNOWN"] / len(suffix_hapax_set["X_UNKNOWN"])
+        sum_word_cnt = sum_num + scale * emit_epsilon * (len(emit_prob[tag].keys()) + 1 )
+        
+        emit_prob[tag]["UNKNOWN"] = log( scale * emit_epsilon) - log(sum_word_cnt) #+ log(scale)
+        # TEST
         # for word in emit_prob[tag].keys():
         #     suffix_word_4, suffix_word_3, suffix_word_2 = word[-4:], word[-3:], word[-2:]
         #     if "X_" in word:
@@ -173,13 +164,59 @@ def smooth_emit(emit_prob, word_cnt):
         #         scale = emit_prob[tag][new_type] / len(suffix_hapax_set[new_type])
         #         emit_prob[tag][new_type] = ((emit_prob[tag][new_type] + scale * emit_epsilon)) / (sum_word_cnt)
         #     elif word in hapax_set:
-        #         scale = minor_num / unknown_num
-        #         emit_prob[tag][word] = ((emit_prob[tag][word] + scale * emit_epsilon)) / (sum_word_cnt)
+        #         if suffix_word_4 in suffix_list:
+        #             new_type = "X_" + suffix_word_4
+        #             scale = emit_prob[tag][new_type] / len(suffix_hapax_set[new_type])
+        #         elif suffix_word_3 in suffix_list:
+        #             new_type = "X_" + suffix_word_3
+        #             scale = emit_prob[tag][new_type] / len(suffix_hapax_set[new_type])
+        #         elif suffix_word_2 in suffix_list:
+        #             new_type = "X_" + suffix_word_2
+        #             scale = emit_prob[tag][new_type] / len(suffix_hapax_set[new_type])
+        #         else:          
+        #             scale = minor_num / unknown_num
+        #             emit_prob[tag][word] = ((emit_prob[tag][word] + scale * emit_epsilon)) / (sum_word_cnt)
         #     else:
         #         emit_prob[tag][word] = ((emit_prob[tag][word] + emit_epsilon)) / (sum_word_cnt)
         # scale = minor_num / unknown_num
         # emit_prob[tag]["UNKNOWN"] = (scale * emit_epsilon) / (sum_word_cnt)
         # prob_sum = sum(emit_prob[tag].values())
+    return suffix_hapax_set, suffix_tag_set
+
+def update_emission_probabilities_viterbi_3(emit_prob, word_cnt, emit_epsilon):
+    hapax_set = get_hapax_set(word_cnt)
+    for tag, word_dic in emit_prob.items():
+        num_minor = max(sum(1 for word in word_dic if word in hapax_set), 1)
+        num_major = len(word_dic) - num_minor
+        scale = num_minor / len(hapax_set)
+        
+        sum_word_cnt = sum(word_dic.values()) + emit_epsilon * (len(word_dic) + 1)
+        
+        for word, count in word_dic.items():
+            if word in hapax_set:
+                # Check for patterns or suffixes and map to pseudowords
+                if word.endswith("-ing"):
+                    pseudoword = "X-ING"
+                    # Adjust the increment based on the pseudoword
+                    word_prob = log(count + 0.5 * emit_epsilon) - log(sum_word_cnt)
+                # Add more pattern checks here as needed
+                
+                else:
+                    pseudoword = "UNKNOWN"
+                    word_prob = log(count + scale * emit_epsilon) - log(sum_word_cnt)
+                
+                # Update the emission probability for the pseudoword
+                emit_prob[tag].setdefault(pseudoword, 0)
+                emit_prob[tag][pseudoword] += word_prob
+            else:
+                # Handle known words with the existing logic
+                emit_prob[tag].setdefault(word, 0)
+                emit_prob[tag][word] = log(count + emit_epsilon) - log(sum_word_cnt)
+
+        # Handle the "UNKNOWN" pseudoword for unseen words
+        emit_prob[tag].setdefault("UNKNOWN", 0)
+        emit_prob[tag]["UNKNOWN"] = log(scale * emit_epsilon) - log(sum_word_cnt)
+
 def training(sentences):
     """
     Computes initial tags, emission words and transition tag-to-tag probabilities
@@ -201,9 +238,9 @@ def training(sentences):
             tag_list.append(tag)
             # * record all word in the set
             if word in word_cnt.keys():
-                word_cnt[word] = (False, tag)
+                word_cnt[word] = (word_cnt[word][0] + 1, tag)
             else:
-                word_cnt[word] = (True, tag)
+                word_cnt[word] = (1, tag)
             if tag not in emit_prob.keys():
                 emit_prob[tag] = {}
             if word not in emit_prob[tag].keys():
@@ -223,11 +260,12 @@ def training(sentences):
     unique_tag_list = list(set(tag_list))
     # probability of init 
     prob_word_tag(init_prob)
-    smooth_emit(emit_prob, word_cnt)
+    suffix_hapax_set, suffix_tag_set = smooth_emit(emit_prob, word_cnt)
     smooth_transmission(trans_prob, unique_tag_list)
-    return init_prob, emit_prob, trans_prob
+    # update_emission_probabilities_viterbi_3(emit_prob, word_cnt, emit_epsilon)
+    return init_prob, emit_prob, trans_prob, suffix_hapax_set, suffix_tag_set
 
-def viterbi_stepforward(i, word, prev_prob, prev_predict_tag_seq, emit_prob, trans_prob):
+def viterbi_stepforward(i, word, prev_prob, prev_predict_tag_seq, emit_prob, trans_prob, suffix_hapax_set, suffix_tag_set):
     """
     Does one step of the viterbi function
     :param i: The i'th column of the lattice/MDP (0-indexing)
@@ -250,22 +288,19 @@ def viterbi_stepforward(i, word, prev_prob, prev_predict_tag_seq, emit_prob, tra
         # with the maximum prob
         for prev_state_key in prev_prob.keys():
             prev_state_prob = prev_prob[prev_state_key]
-            
-            if word not in emit_prob[cur_state_key].keys():
-                suffix_word_4, suffix_word_3, suffix_word_2 = word[-4:], word[-3:], word[-2:]
-                if (suffix_word_4 in suffix_list or suffix_word_3 in suffix_list or suffix_word_2 in suffix_list):
-                    if suffix_word_4 in suffix_list:
-                        suffix = suffix_word_4
-                    elif suffix_word_3 in suffix_list:
-                        suffix = suffix_word_3
-                    elif suffix_word_2 in suffix_list:
-                        suffix = suffix_word_2
-                    known_word = "X_" + suffix
-                else:
-                    known_word = "UNKNOWN"
-            else:
+            if word in emit_prob[cur_state_key].keys():
                 known_word = word
-            prob = prev_state_prob + trans_prob[prev_state_key][cur_state_key] + emit_prob[cur_state_key][known_word]
+                bias = 0
+            else:
+                new_type = have_profix(word)
+                if new_type in suffix_tag_set[cur_state_key].keys():
+                    scale = suffix_tag_set[cur_state_key][new_type] / len(suffix_hapax_set[new_type])
+                else:
+                    scale = emit_epsilon / len(suffix_hapax_set[new_type])
+                bias = log(scale)
+                
+                known_word = "UNKNOWN" 
+            prob = prev_state_prob + trans_prob[prev_state_key][cur_state_key] + emit_prob[cur_state_key][known_word] + bias
             if prob > max_prob:
                 max_prob = prob
                 max_index = prev_state_key
@@ -287,7 +322,7 @@ def viterbi_3(train, test, get_probs=training):
     output: list of sentences, each sentence is a list of (word,tag) pairs.
             E.g., [[(word1, tag1), (word2, tag2)], [(word3, tag3), (word4, tag4)]]
     '''
-    init_prob, emit_prob, trans_prob = get_probs(train)
+    init_prob, emit_prob, trans_prob, suffix_hapax_set, suffix_tag_set = get_probs(train)
     
     predicts = []
     
@@ -307,7 +342,7 @@ def viterbi_3(train, test, get_probs=training):
 
         # forward steps to calculate log probs for sentence
         for i in range(length):
-            log_prob, predict_tag_seq = viterbi_stepforward(i, sentence[i], log_prob, predict_tag_seq, emit_prob,trans_prob)
+            log_prob, predict_tag_seq = viterbi_stepforward(i, sentence[i], log_prob, predict_tag_seq, emit_prob, trans_prob, suffix_hapax_set, suffix_tag_set)
             
         # TODO:(III) 
         # according to the storage of probabilities and sequences, get the final prediction.

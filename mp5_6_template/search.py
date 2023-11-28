@@ -37,6 +37,8 @@ def search(maze, searchMethod):
     # }.get(searchMethod, [])(maze)
     states_explored, path = astar(maze)
     maze.states_explored = states_explored
+    if path != None:
+        maze.alien.set_alien_pos(path[-1].state)
     return path 
 
 
@@ -49,19 +51,16 @@ def astar(maze):
     state_tmp = 0
     while len(frontier) > 0:
         visited_pos = heapq.heappop(frontier)
-        state_tmp += 1
+        visited_pos.maze.states_explored = state_tmp
         if visited_pos.is_goal() == True:
             path = backtrack(visited_states, visited_pos)
-            visited_pos.maze.states_explored = state_tmp - 1
+            # visited_pos.maze.states_explored += 1
             # maze = visited_pos.maze
             return visited_pos.maze.states_explored, path
-        
-        visited_pos.maze.states_explored = state_tmp
-        visited_pos.dist_from_start = visited_states[visited_pos][1]
+        #visited_pos.dist_from_start = visited_states[visited_pos][1]
         print(visited_pos, visited_pos.maze.states_explored)
         neighbors = visited_pos.get_neighbors()
-        # state_tmp = visited_pos.maze.states_explored
-        
+        state_tmp = visited_pos.maze.states_explored
         for i in neighbors: 
             if i not in visited_states:
                 heapq.heappush(frontier, i)
@@ -69,6 +68,9 @@ def astar(maze):
             else:
                 if i.dist_from_start < visited_states[i][1]:
                     visited_states[i] = (visited_pos, i.dist_from_start)
+                    ind = frontier.index(i)
+                    frontier[ind].dist_from_start = i.dist_from_start
+                    heapq.heapify(frontier)
     return visited_pos.maze.states_explored, None
 
 
@@ -83,6 +85,7 @@ def backtrack(visited_states, current_state):
     while distant != 0:
         path.append(parent_node)
         parent_node, distant = visited_states[parent_node]
+    path[-1].maze.alien.set_alien_pos(path[-1].maze.get_start())
     path = path[::-1]
     # ------------------------------
     return path

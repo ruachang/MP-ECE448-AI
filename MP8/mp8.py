@@ -30,8 +30,8 @@ def main(args):
     print("Accuracy: {:.2f}%".format(baseline_acc * 100))
     print("\tMultitags Accuracy: {:.2f}%".format(multitags_acc * 100))
     print("\tUnseen words Accuracy: {:.2f}%".format(unseen_acc * 100))
-    print("\tTop K Wrong Word-Tag Predictions: {}".format(utils.topk_wordtagcounter(wrong_wordtagcounter, k=4)))
-    print("\tTop K Correct Word-Tag Predictions: {}".format(utils.topk_wordtagcounter(correct_wordtagcounter, k=4)))
+    print("\tTop K Wrong Word-Tag Predictions: {}".format(utils.topk_wordtagcounter(wrong_wordtagcounter, k=40)))
+    print("\tTop K Correct Word-Tag Predictions: {}".format(utils.topk_wordtagcounter(correct_wordtagcounter, k=40)))
     
     print()
 

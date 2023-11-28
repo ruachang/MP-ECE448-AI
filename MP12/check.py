@@ -1,0 +1,71 @@
+import numpy as np
+import utils
+
+
+# For checkpoint1
+
+# Parameters are:
+
+# snake_head_x=5, snake_head_y=5, food_x=2, food_y=2, width=18, 
+
+# height=10, rock_x=3, rock_y=4, Ne=40, C=40, gamma=0.7
+
+true_Q = utils.load('data/checkpoint1.npy')
+
+true_N = utils.load('data/checkpoint1_N.npy')
+
+
+# For checkpoint2
+
+# Parameters are:
+
+# snake_head_x=5, snake_head_y=5, food_x=2, food_y=2, width=18, 
+
+# height=10, rock_x=3, rock_y=4, Ne=20, C=60, gamma=0.5
+
+# Uncomment the two lines below for checkpoint2
+
+# true_Q = utils.load('data/checkpoint2.npy')
+
+# true_N = utils.load('data/checkpoint2_N.npy')
+
+
+# For checkpoint3
+
+# Parameters are:
+
+# snake_head_x=3, snake_head_y=4, food_x=2, food_y=2, width=10, 
+
+# height=18, rock_x=5, rock_y=5, Ne=30, C=30, gamma=0.6
+
+# Uncomment the two lines below for checkpoint3
+
+# true_Q = utils.load('data/checkpoint3.npy')
+
+# true_N = utils.load('data/checkpoint3_N.npy')
+
+
+Q = utils.load("q_agent.npy")
+
+N = utils.load("q_agent_N.npy")
+
+
+differences_Q = np.where(true_Q != Q)
+
+differences_N = np.where(true_N != N)
+
+
+# Print out the differing elements
+
+for index in zip(*differences_Q):
+
+    print(f"Difference at index {index}: true_Q has {true_Q[index]}, self.agent.Q has {Q[index]}")
+
+for index in zip(*differences_N):
+
+    print(f"Difference at index {index}: true_N has {true_N[index]}, self.agent.N has {N[index]}")
+            
+
+print(f'Your Q matrix is correct: {np.array_equal(true_Q, Q)}')
+
+print(f'Your N matrix is correct: {np.array_equal(true_N, N)}')

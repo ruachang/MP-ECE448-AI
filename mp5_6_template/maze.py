@@ -135,7 +135,8 @@ class Maze:
                 the k valid waypoints that are closest to waypoint
         """
         neighbors_dis_dic = {}
-        for waypoint in self.get_valid_waypoints()[cur_shape]:
+        valid_waypoints = self.get_valid_waypoints()
+        for waypoint in valid_waypoints[cur_shape]:
             if waypoint == cur_waypoint:
                 continue
             else:
@@ -173,13 +174,14 @@ class Maze:
             legal =  True
             # if it change from vertical => horizontal / horizontal => vertical, they should go through ball
             if (start[2] == 0 and end[2] == 2) or (start[2] == 2 and end[2] == 0):
-                shape_new_alien = self.create_new_alien(start[0], start[1], 1)
-                if does_alien_touch_wall(shape_new_alien, self.walls):
-                    legal = False  
+                # shape_new_alien = self.create_new_alien(start[0], start[1], 1)
+                # if does_alien_touch_wall(shape_new_alien, self.walls):
+                legal = False
             shape_new_alien = self.create_new_alien(start[0], start[1], end[2])
+            shape_old_alien = self.create_new_alien(start[0], start[1], start[2])
             if does_alien_touch_wall(shape_new_alien, self.walls):
                 legal = False 
-            if does_alien_path_touch_wall(self.alien, self.walls, (end[0], end[1])):
+            if does_alien_path_touch_wall(shape_old_alien, self.walls, (end[0], end[1])):
                 legal = False
             self.move_cache[(start, end)] = legal
             return legal
@@ -194,9 +196,11 @@ class Maze:
                 list of possible neighbor positions, formatted as (x, y, shape) tuples.
         """
         self.states_explored += 1
-
+        if x == 177:
+            print("wait")
         nearest = self.get_nearest_waypoints((x, y), shape_idx)
         neighbors = [(*end, shape_idx) for end in nearest]
+
         for end in [(x, y, (shape_idx - 1) % len(self.alien.get_shapes())), (x, y, (shape_idx + 1) % len(self.alien.get_shapes()))]:
             start = (x, y, shape_idx)
             if self.is_valid_move(start, end):

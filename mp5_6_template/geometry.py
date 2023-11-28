@@ -184,6 +184,7 @@ def is_point_in_polygon(point, polygon):
     symbol = 0
     # if the dot times of PA, PB, PC, PD with AB, BC, CD, DA is the same symbol,
     # then returns true
+    dot = []
     for i in range(4):
         point1, point2 = polygon[i], polygon[(i + 1) % 4]
         vector = (point2[0] - point1[0], point2[1] - point1[1])
@@ -191,13 +192,12 @@ def is_point_in_polygon(point, polygon):
         dis = point_segment_distance(point, (point1, point2))
         if dis == 0:
             return True
-        dot = vector[0] * vector2[0] + vector[1] * vector2[1]
-        if dot >= 0:
-            # symbol += 1
-            continue
-        else:
-            return False
-    return True
+        dot.append(cross_product(vector, vector2))
+    if (dot[0] <= 0 and dot[1] <= 0 and dot[2] <= 0 and dot[3] <= 0) or \
+    (dot[0] <= 0 and dot[1] <= 0 and dot[2] <= 0 and dot[3] <= 0):
+        return True 
+    else:
+        return False
 
 def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: Tuple[int, int]):
     """Determine whether the alien's straight-line path from its current position to the waypoint touches a wall
@@ -292,8 +292,8 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
     
     for wall in walls:
         # TEST
-        if (wall[0] == 200 and wall[1] == 100):
-            print("why")
+        # if (wall[0] == 200 and wall[1] == 100):
+        #     print("why")
         wall_vector = ((wall[0], wall[1]), (wall[2], wall[3]))
         if is_point_in_polygon((wall[0], wall[1]), polygon) or is_point_in_polygon((wall[2], wall[3]), polygon):
             return True
@@ -301,11 +301,11 @@ def does_alien_path_touch_wall(alien: Alien, walls: List[Tuple[int]], waypoint: 
             for edge in edges:
                 if do_segments_intersect(((wall[0], wall[1]), (wall[2], wall[3])), edge):
                     return True
-                
-        # dis1 = segment_distance(wall_vector, move_vec1)
-        # dis2 = segment_distance(wall_vector, move_vec2)
-        # if min(dis1, dis2) <= width:
-        #     return True
+        if shape == "Vertical" or shape == "Horizontal":      
+            dis1 = segment_distance(wall_vector, move_vec1)
+            dis2 = segment_distance(wall_vector, move_vec2)
+            if min(dis1, dis2) <= width:
+                return True
     # alien.set_alien_pos(waypoint)
     if does_alien_touch_wall(alien, walls):
         alien.set_alien_pos(cur_pos)
